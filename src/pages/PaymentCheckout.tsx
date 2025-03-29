@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
-import { CardStackIcon, CreditCard, Plus } from "lucide-react";
+import { CreditCard, Plus, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -144,7 +144,7 @@ export default function PaymentCheckout() {
         >
           {isProcessing ? (
             <>
-              <CardStackIcon className="mr-2 h-4 w-4 animate-pulse" />
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Processing...
             </>
           ) : (

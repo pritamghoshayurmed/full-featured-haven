@@ -8,10 +8,11 @@ const Index = () => {
   const navigate = useNavigate();
   
   useEffect(() => {
+    // Navigate based on authentication status
     if (isAuthenticated) {
       navigate("/dashboard");
     } else {
-      navigate("/");
+      navigate("/login");
     }
   }, [isAuthenticated, navigate]);
   
