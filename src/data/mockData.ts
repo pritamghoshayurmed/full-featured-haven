@@ -1,4 +1,3 @@
-
 import { Appointment, DoctorSpecialization, Message, Notification, PaymentMethod, Review, TimeSlot, User } from "@/types";
 
 // Doctor specializations
@@ -274,7 +273,33 @@ export const paymentMethods: PaymentMethod[] = [
 
 // Get time slots for a specific doctor and date
 export const getTimeSlotsByDoctorAndDate = (doctorId: string, date: string): TimeSlot[] => {
-  return timeSlots.filter(slot => slot.doctorId === doctorId && slot.date === date);
+  // Generate current hour and add 1 to start from next hour
+  const currentHour = new Date().getHours();
+  const currentDate = new Date().toISOString().split('T')[0];
+  
+  // Generate time slots from 8 AM to 8 PM
+  const slots: TimeSlot[] = [];
+  
+  // For demo purposes, create 10 slots with most being available
+  for (let i = 8; i <= 18; i++) {
+    // Format time as HH:00 AM/PM
+    const hour = i > 12 ? i - 12 : i;
+    const ampm = i >= 12 ? 'PM' : 'AM';
+    const time = `${hour}:00 ${ampm}`;
+    
+    // Make slots in the past unavailable
+    const isAvailable = date > currentDate || (date === currentDate && i > currentHour);
+    
+    slots.push({
+      id: `${doctorId}-${date}-${i}`,
+      doctorId,
+      date,
+      time,
+      isAvailable,
+    });
+  }
+  
+  return slots;
 };
 
 // Get appointments for a specific user

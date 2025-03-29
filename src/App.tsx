@@ -30,6 +30,9 @@ import Chat from "@/pages/Chat";
 import ChatDetail from "@/pages/ChatDetail";
 import Profile from "@/pages/Profile";
 import EditProfile from "@/pages/EditProfile";
+import DoctorDashboard from "@/pages/doctor/DoctorDashboard";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AiAssistant from "@/pages/AiAssistant";
 
 // 404 page
 import NotFound from "@/pages/NotFound";
@@ -68,6 +71,13 @@ const App = () => (
               <Route path="/chat/:id" element={<ChatDetail />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/profile/edit" element={<EditProfile />} />
+              <Route path="/ai-assistant" element={<AiAssistant />} />
+              
+              {/* Doctor routes */}
+              <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
+              
+              {/* Admin routes */}
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
             </Route>
             
             {/* 404 route */}

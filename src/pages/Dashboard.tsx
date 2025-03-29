@@ -1,6 +1,7 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, Star } from "lucide-react";
+import { Search, Star, Bot } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/AppLayout";
 import { DoctorCard } from "@/components/DoctorCard";
@@ -8,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { 
   getAllDoctors, 
   specializations, 
@@ -18,6 +20,15 @@ export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Redirect to appropriate dashboard based on role
+  useEffect(() => {
+    if (user?.role === "doctor") {
+      navigate("/doctor/dashboard");
+    } else if (user?.role === "admin") {
+      navigate("/admin/dashboard");
+    }
+  }, [user, navigate]);
   
   const doctors = getAllDoctors();
   const upcomingAppointments = getUserAppointments(user?.id || "").filter(apt => 
@@ -79,6 +90,27 @@ export default function Dashboard() {
             <h2 className="font-semibold text-lg">{user?.name}</h2>
           </div>
         </div>
+        
+        {/* AI Health Assistant card */}
+        <Card className="mb-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+          <CardContent className="p-4">
+            <div className="flex items-center">
+              <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center mr-4">
+                <Bot size={28} className="text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg">KABIRAJ AI Health Assistant</h3>
+                <p className="text-sm text-white/80">Describe your symptoms for a quick assessment</p>
+              </div>
+            </div>
+            <Button 
+              onClick={() => navigate("/ai-assistant")}
+              className="mt-3 w-full bg-white text-blue-600 hover:bg-white/90"
+            >
+              Talk to KABIRAJ AI
+            </Button>
+          </CardContent>
+        </Card>
         
         {/* Search */}
         <div className="relative mb-6">
