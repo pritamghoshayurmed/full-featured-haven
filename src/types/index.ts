@@ -5,7 +5,7 @@ export interface User {
   email: string;
   phone: string;
   avatar?: string;
-  role: 'patient' | 'doctor';
+  role: 'patient' | 'doctor' | 'admin';
   specialization?: string;
   experience?: string;
   rating?: number;

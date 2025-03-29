@@ -1,3 +1,4 @@
+
 import { Appointment, DoctorSpecialization, Message, Notification, PaymentMethod, Review, TimeSlot, User } from "@/types";
 
 // Doctor specializations
@@ -334,4 +335,9 @@ export const getDoctorById = (id: string): User | undefined => {
 // Get all doctors
 export const getAllDoctors = (): User[] => {
   return users.filter(user => user.role === 'doctor');
+};
+
+// Get all users
+export const getAllUsers = (): User[] => {
+  return users;
 };
