@@ -147,8 +147,6 @@ export default function AiAssistant() {
     });
   };
   
-  const navigate = useNavigate();
-  
   return (
     <AppLayout title="KABIRAJ AI Assistant">
       <div className="flex flex-col h-[calc(100vh-120px)]">
