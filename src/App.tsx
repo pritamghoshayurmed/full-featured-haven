@@ -13,6 +13,7 @@ import Login from "@/pages/auth/Login";
 import Register from "@/pages/auth/Register";
 import OtpVerification from "@/pages/auth/OtpVerification";
 import ForgotPassword from "@/pages/auth/ForgotPassword";
+import ResetPassword from "@/pages/auth/ResetPassword";
 
 // Main app pages
 import Dashboard from "@/pages/Dashboard";
@@ -49,6 +50,7 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/otp-verification" element={<OtpVerification />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>

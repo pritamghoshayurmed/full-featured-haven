@@ -25,13 +25,17 @@ export default function Register() {
     
     try {
       await register(name, email, password, phone);
+      toast({
+        title: "Account created",
+        description: "Your account has been created successfully. Please check your email to verify your account.",
+      });
       navigate("/otp-verification");
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       toast({
         variant: "destructive",
         title: "Registration failed",
-        description: "There was an error creating your account. Please try again.",
+        description: error.message || "There was an error creating your account. Please try again.",
       });
     } finally {
       setIsSubmitting(false);
@@ -108,6 +112,9 @@ export default function Register() {
               required
               className="py-6"
             />
+            <p className="text-xs text-gray-500">
+              Password must be at least 6 characters
+            </p>
           </div>
           
           <div className="pt-2">

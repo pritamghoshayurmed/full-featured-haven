@@ -24,12 +24,12 @@ export default function Login() {
     try {
       await login(email, password);
       navigate("/dashboard");
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       toast({
         variant: "destructive",
         title: "Login failed",
-        description: "Invalid email or password. Please try again.",
+        description: error.message || "Invalid email or password. Please try again.",
       });
     } finally {
       setIsSubmitting(false);

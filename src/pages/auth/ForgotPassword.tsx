@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -28,12 +29,12 @@ export default function ForgotPassword() {
         title: "Reset link sent",
         description: "Check your email for a password reset link.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       toast({
         variant: "destructive",
         title: "Failed to send reset link",
-        description: "There was an error sending the reset link. Please try again.",
+        description: error.message || "There was an error sending the reset link. Please try again.",
       });
     } finally {
       setIsSubmitting(false);
@@ -72,6 +73,11 @@ export default function ForgotPassword() {
             <p className="text-gray-500 mb-6">
               We've sent a password reset link to {email}
             </p>
+            <Alert className="mb-6">
+              <AlertDescription>
+                Note: If you don't see the email in your inbox, please check your spam folder.
+              </AlertDescription>
+            </Alert>
             <Button 
               onClick={() => navigate("/login")} 
               className="py-6 px-8 text-base"
