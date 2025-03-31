@@ -21,6 +21,7 @@ export enum AppointmentType {
 export enum PaymentStatus {
   PENDING = 'pending',
   PAID = 'paid',
+  COMPLETED = 'completed',
   REFUNDED = 'refunded',
   FAILED = 'failed'
 }

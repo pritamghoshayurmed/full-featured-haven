@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -8,11 +8,21 @@ import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
-import { getUserPaymentMethods } from "@/data/mockData";
+import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { appointmentService } from "@/services/appointment.service";
+import doctorService from "@/services/doctor.service";
+import { format } from "date-fns";
+
+// Demo card details for testing
+const DEMO_CARD = {
+  id: "demo-card",
+  name: "Demo Card (4242 4242 4242 4242)",
+  expiryDate: "12/25",
+  isDefault: true
+};
 
 export default function PaymentCheckout() {
   const { appointmentId } = useParams<{ appointmentId: string }>();
@@ -20,21 +30,58 @@ export default function PaymentCheckout() {
   const { toast } = useToast();
   const { user } = useAuth();
   
-  const paymentMethods = getUserPaymentMethods(user?.id || "");
-  
-  const [selectedMethod, setSelectedMethod] = useState(
-    paymentMethods.find(pm => pm.isDefault)?.id || ""
-  );
+  // Payment state
+  const [selectedMethod, setSelectedMethod] = useState(DEMO_CARD.id);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentType, setPaymentType] = useState("card");
   const [upiId, setUpiId] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
   
-  const handlePayNow = () => {
-    if (paymentType === "card" && !selectedMethod) {
+  // Appointment and doctor data
+  const [appointmentData, setAppointmentData] = useState<any>(null);
+  const [doctor, setDoctor] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!appointmentId) return;
+      
+      try {
+        setIsLoading(true);
+        
+        // Fetch appointment details
+        const appointment = await appointmentService.getAppointmentById(appointmentId);
+        setAppointmentData(appointment);
+        
+        // Fetch doctor details
+        if (appointment?.doctor?._id || appointment?.doctor) {
+          const doctorId = appointment.doctor._id || appointment.doctor;
+          const doctorData = await doctorService.getDoctorById(doctorId);
+          setDoctor(doctorData);
+        }
+      } catch (err: any) {
+        console.error('Error fetching data:', err);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load appointment details.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [appointmentId, toast]);
+  
+  const handlePayNow = async () => {
+    if (paymentType === "card" && !selectedMethod && !cardNumber) {
       toast({
         variant: "destructive",
         title: "Payment method required",
-        description: "Please select a payment method",
+        description: "Please select or enter a payment method",
       });
       return;
     }
@@ -50,25 +97,94 @@ export default function PaymentCheckout() {
     
     setIsProcessing(true);
     
-    // In a real app, this would call an API to process the payment
-    setTimeout(() => {
+    try {
+      // Check if using demo card
+      const isDemoCard = selectedMethod === DEMO_CARD.id || cardNumber.replace(/\s/g, "") === "4242424242424242";
+      
+      if (isDemoCard) {
+        // Process payment with demo card
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
+        
+        // Update appointment payment status
+        if (appointmentId) {
+          try {
+            // In a real implementation, this would be a proper payment processing API call
+            // Here we're just updating the appointment status directly
+            await appointmentService.updatePaymentStatus(appointmentId, "completed");
+          } catch (error) {
+            console.error("Error updating payment status:", error);
+          }
+        }
+        
+        navigate("/payment-success", { 
+          state: { 
+            transactionId: `TXN${Date.now()}`,
+            appointmentId
+          } 
+        });
+      } else {
+        // In a real app, this would call a payment gateway API
+        toast({
+          variant: "destructive",
+          title: "Use demo card",
+          description: "For testing, please use the Demo Card or card number 4242 4242 4242 4242",
+        });
+        setIsProcessing(false);
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast({
+        variant: "destructive",
+        title: "Payment failed",
+        description: "There was an error processing your payment. Please try again.",
+      });
       setIsProcessing(false);
-      navigate("/payment-success");
-    }, 2000);
+    }
   };
   
-  // Dummy appointment data - would come from API in real implementation
-  const appointmentData = {
-    id: appointmentId,
-    doctor: "Dr. Sarah Johnson",
-    date: "Nov 20, 2023",
-    time: "10:00 AM",
-    type: "Online Consultation",
-    fee: 1200,
-    serviceFee: 50,
+  // Format date
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "";
+    try {
+      return format(new Date(dateString), 'MMM dd, yyyy');
+    } catch (e) {
+      return dateString;
+    }
   };
   
-  const totalAmount = appointmentData.fee + appointmentData.serviceFee;
+  if (isLoading) {
+    return (
+      <AppLayout title="Payment">
+        <div className="p-4 h-screen flex items-center justify-center">
+          <div className="flex flex-col items-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="mt-4 text-gray-600">Loading payment details...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+  
+  if (!appointmentData || !doctor) {
+    return (
+      <AppLayout title="Payment">
+        <div className="p-4 text-center">
+          <p className="mb-4">Appointment details not found</p>
+          <Button 
+            onClick={() => navigate("/appointments")} 
+            className="mt-2"
+          >
+            View My Appointments
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
+  
+  // Calculate total amount
+  const consultationFee = doctor.consultationFee || doctor.fee || 0;
+  const serviceFee = 50; // Fixed service fee
+  const totalAmount = consultationFee + serviceFee;
   
   return (
     <AppLayout title="Payment">
@@ -80,22 +196,28 @@ export default function PaymentCheckout() {
             <div className="space-y-3 mb-4">
               <div className="flex justify-between">
                 <span className="text-gray-600">Appointment ID</span>
-                <span className="font-medium">{appointmentId}</span>
+                <span className="font-medium">{appointmentData.id || appointmentId}</span>
               </div>
               
               <div className="flex justify-between">
                 <span className="text-gray-600">Doctor</span>
-                <span className="font-medium">{appointmentData.doctor}</span>
+                <span className="font-medium">{doctor.name}</span>
               </div>
               
               <div className="flex justify-between">
                 <span className="text-gray-600">Date & Time</span>
-                <span className="font-medium">{appointmentData.date} at {appointmentData.time}</span>
+                <span className="font-medium">
+                  {formatDate(appointmentData.date)} at {appointmentData.startTime || appointmentData.time}
+                </span>
               </div>
               
               <div className="flex justify-between">
                 <span className="text-gray-600">Appointment Type</span>
-                <span className="font-medium">{appointmentData.type}</span>
+                <span className="font-medium">
+                  {appointmentData.type === 'ONLINE' || appointmentData.type === 'online' 
+                    ? 'Online Consultation' 
+                    : 'In-person Visit'}
+                </span>
               </div>
             </div>
             
@@ -106,12 +228,12 @@ export default function PaymentCheckout() {
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-600">Consultation Fee</span>
-                <span>{formatCurrency(appointmentData.fee)}</span>
+                <span>{formatCurrency(consultationFee)}</span>
               </div>
               
               <div className="flex justify-between">
                 <span className="text-gray-600">Service Fee</span>
-                <span>{formatCurrency(appointmentData.serviceFee)}</span>
+                <span>{formatCurrency(serviceFee)}</span>
               </div>
               
               <Separator className="my-2" />
@@ -152,33 +274,50 @@ export default function PaymentCheckout() {
                   onValueChange={setSelectedMethod}
                   className="space-y-3"
                 >
-                  {paymentMethods.map(method => (
-                    <div 
-                      key={method.id} 
-                      className="flex items-center border rounded-lg p-3"
-                    >
-                      <RadioGroupItem value={method.id} id={method.id} className="mr-3" />
-                      <Label htmlFor={method.id} className="flex items-center cursor-pointer">
-                        <CreditCard className="h-5 w-5 mr-3" />
-                        <div>
-                          <p className="font-medium">{method.name}</p>
-                          {method.expiryDate && (
-                            <p className="text-sm text-gray-500">Expires {method.expiryDate}</p>
-                          )}
-                        </div>
-                      </Label>
-                    </div>
-                  ))}
+                  <div className="flex items-center border rounded-lg p-3">
+                    <RadioGroupItem value={DEMO_CARD.id} id={DEMO_CARD.id} className="mr-3" />
+                    <Label htmlFor={DEMO_CARD.id} className="flex items-center cursor-pointer">
+                      <CreditCard className="h-5 w-5 mr-3 text-primary" />
+                      <div>
+                        <p className="font-medium">{DEMO_CARD.name}</p>
+                        <p className="text-sm text-gray-500">Expires {DEMO_CARD.expiryDate}</p>
+                      </div>
+                    </Label>
+                  </div>
                 </RadioGroup>
                 
-                <Button 
-                  variant="outline" 
-                  className="w-full mt-3 flex items-center justify-center"
-                  onClick={() => navigate("/payment-methods")}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add New Payment Method
-                </Button>
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <Label htmlFor="card-number">Card Number</Label>
+                    <Input 
+                      id="card-number" 
+                      placeholder="4242 4242 4242 4242"
+                      value={cardNumber}
+                      onChange={(e) => setCardNumber(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="flex space-x-3">
+                    <div className="flex-1">
+                      <Label htmlFor="expiry">Expiry Date</Label>
+                      <Input 
+                        id="expiry" 
+                        placeholder="MM/YY"
+                        value={cardExpiry}
+                        onChange={(e) => setCardExpiry(e.target.value)}
+                      />
+                    </div>
+                    <div className="w-1/3">
+                      <Label htmlFor="cvv">CVV</Label>
+                      <Input 
+                        id="cvv" 
+                        placeholder="123"
+                        value={cardCvv}
+                        onChange={(e) => setCardCvv(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
               </>
             )}
             
@@ -228,7 +367,7 @@ export default function PaymentCheckout() {
         <Button 
           className="w-full py-6"
           onClick={handlePayNow}
-          disabled={isProcessing || (paymentType === "card" && !selectedMethod) || (paymentType === "upi" && !upiId)}
+          disabled={isProcessing}
         >
           {isProcessing ? (
             <>

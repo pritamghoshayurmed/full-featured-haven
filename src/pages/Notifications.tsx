@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Bell, Calendar, CreditCard, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { getUserNotifications } from "@/data/mockData";
 import { Notification } from "@/types";
 

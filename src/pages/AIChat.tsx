@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useChat } from '@/contexts/ChatContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -246,6 +246,7 @@ const AIChat: React.FC = () => {
     
     setIsLoading(true);
     try {
+      // Make sure we're passing the current chat ID to retain context
       await sendMessageToAI(message);
       setMessage('');
     } catch (error) {

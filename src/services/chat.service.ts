@@ -1,11 +1,9 @@
-import axios from 'axios';
-
-const API_URL = 'http://localhost:8000/api';
+import axiosInstance from '@/lib/axios';
 
 // Get all chats for the current user
 const getUserChats = async () => {
   try {
-    const response = await axios.get(`${API_URL}/chats`);
+    const response = await axiosInstance.get('/chats');
     return response.data.data;
   } catch (error: any) {
     console.error('Error fetching chats:', error);
@@ -21,7 +19,7 @@ const getUserChats = async () => {
 // Get a single chat by ID with messages
 const getChatById = async (chatId: string) => {
   try {
-    const response = await axios.get(`${API_URL}/chats/${chatId}`);
+    const response = await axiosInstance.get(`/chats/${chatId}`);
     return response.data.data;
   } catch (error: any) {
     console.error('Error fetching chat:', error);
@@ -41,7 +39,7 @@ const getChatById = async (chatId: string) => {
 // Create or get an existing chat with another user
 const getOrCreateChat = async (userId: string) => {
   try {
-    const response = await axios.post(`${API_URL}/chats`, { userId });
+    const response = await axiosInstance.post('/chats', { userId });
     return response.data.data;
   } catch (error: any) {
     console.error('Error creating chat:', error);
@@ -61,7 +59,7 @@ const getOrCreateChat = async (userId: string) => {
 // Send a message in a chat
 const sendMessage = async (chatId: string, content: string) => {
   try {
-    const response = await axios.post(`${API_URL}/chats/${chatId}/messages`, { content });
+    const response = await axiosInstance.post(`/chats/${chatId}/messages`, { content });
     return response.data.data;
   } catch (error: any) {
     console.error('Error sending message:', error);
@@ -82,7 +80,7 @@ const sendMessage = async (chatId: string, content: string) => {
 // Get all AI chats for the current user
 const getAIChats = async () => {
   try {
-    const response = await axios.get(`${API_URL}/ai/chats`);
+    const response = await axiosInstance.get('/ai/chats');
     return response.data.data;
   } catch (error: any) {
     console.error('Error fetching AI chats:', error);
@@ -98,7 +96,7 @@ const getAIChats = async () => {
 // Get a single AI chat by ID
 const getAIChatById = async (chatId: string) => {
   try {
-    const response = await axios.get(`${API_URL}/ai/chats/${chatId}`);
+    const response = await axiosInstance.get(`/ai/chats/${chatId}`);
     return response.data.data;
   } catch (error: any) {
     console.error('Error fetching AI chat:', error);
@@ -119,7 +117,7 @@ const getAIChatById = async (chatId: string) => {
 const sendMessageToAI = async (message: string, chatId?: string) => {
   try {
     console.log('Sending message to AI:', { message, chatId });
-    const response = await axios.post(`${API_URL}/ai/chat`, { message, chatId });
+    const response = await axiosInstance.post('/ai/chat', { message, chatId });
     console.log('AI response:', response.data);
     return response.data.data;
   } catch (error: any) {
@@ -152,7 +150,7 @@ const sendMessageToAI = async (message: string, chatId?: string) => {
 // Share an AI chat summary with a doctor
 const shareAIChatWithDoctor = async (chatId: string, doctorId: string) => {
   try {
-    const response = await axios.post(`${API_URL}/ai/chats/${chatId}/share`, { doctorId });
+    const response = await axiosInstance.post(`/ai/chats/${chatId}/share`, { doctorId });
     return response.data.data;
   } catch (error: any) {
     console.error('Error sharing AI chat:', error);
@@ -173,7 +171,7 @@ const shareAIChatWithDoctor = async (chatId: string, doctorId: string) => {
 // Delete an AI chat
 const deleteAIChat = async (chatId: string) => {
   try {
-    const response = await axios.delete(`${API_URL}/ai/chats/${chatId}`);
+    const response = await axiosInstance.delete(`/ai/chats/${chatId}`);
     return response.data;
   } catch (error: any) {
     console.error('Error deleting AI chat:', error);
@@ -192,7 +190,7 @@ const deleteAIChat = async (chatId: string) => {
 // Get AI chat summaries shared with doctor (for doctors only)
 const getSharedAIChats = async () => {
   try {
-    const response = await axios.get(`${API_URL}/doctors/ai-chats`);
+    const response = await axiosInstance.get('/doctors/ai-chats');
     return response.data.data;
   } catch (error: any) {
     console.error('Error fetching shared AI chats:', error);

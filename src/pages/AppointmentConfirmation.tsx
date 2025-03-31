@@ -1,4 +1,4 @@
-
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Calendar, Check, MapPin, Video } from "lucide-react";
 import { format } from "date-fns";
@@ -8,8 +8,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { getDoctorById } from "@/data/mockData";
 import { useToast } from "@/components/ui/use-toast";
+import doctorService from "@/services/doctor.service";
+import { appointmentService } from "@/services/appointment.service";
+import { formatCurrency } from "@/lib/utils";
 
 export default function AppointmentConfirmation() {
   const location = useLocation();
@@ -18,6 +20,7 @@ export default function AppointmentConfirmation() {
   
   // Get data from state
   const { 
+    appointmentId,
     doctorId, 
     date, 
     time, 
@@ -25,8 +28,31 @@ export default function AppointmentConfirmation() {
     reason 
   } = location.state || {};
   
-  // Get doctor details
-  const doctor = getDoctorById(doctorId);
+  const [doctor, setDoctor] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchDoctorDetails = async () => {
+      if (!doctorId) return;
+      
+      try {
+        setIsLoading(true);
+        const doctorData = await doctorService.getDoctorById(doctorId);
+        setDoctor(doctorData);
+      } catch (err: any) {
+        console.error('Error fetching doctor details:', err);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load doctor details.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchDoctorDetails();
+  }, [doctorId, toast]);
   
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -39,6 +65,16 @@ export default function AppointmentConfirmation() {
   };
   
   // If no data is found, show error
+  if (isLoading) {
+    return (
+      <AppLayout title="Confirmation">
+        <div className="p-4 text-center">
+          <p>Loading appointment details...</p>
+        </div>
+      </AppLayout>
+    );
+  }
+  
   if (!doctor || !date || !time) {
     return (
       <AppLayout title="Confirmation">
@@ -57,9 +93,7 @@ export default function AppointmentConfirmation() {
   
   // Handler for payment
   const handleProceedToPayment = () => {
-    // In a real app, this would create an appointment and redirect to payment
-    // For this demo, we'll simulate creating an appointment and navigate to payment
-    navigate("/payment-checkout/apt123");
+    navigate(`/payment-checkout/${appointmentId}`);
   };
   
   return (
@@ -79,7 +113,10 @@ export default function AppointmentConfirmation() {
           <CardContent className="p-4">
             <div className="flex items-center mb-4">
               <Avatar className="h-16 w-16">
-                <AvatarImage src={doctor.avatar} alt={doctor.name} />
+                <AvatarImage 
+                  src={doctor.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor.name)}&background=random`} 
+                  alt={doctor.name} 
+                />
                 <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
               </Avatar>
               
@@ -91,45 +128,48 @@ export default function AppointmentConfirmation() {
             
             <Separator className="my-4" />
             
-            <div className="space-y-4">
-              <div className="flex">
-                <Calendar className="h-5 w-5 text-gray-500 mr-3" />
+            <div className="space-y-3">
+              <div className="flex items-start">
+                <Calendar className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
                 <div>
-                  <p className="text-gray-700">{formatDate(date)}</p>
-                  <p className="font-semibold">{time}</p>
+                  <p className="font-medium">
+                    {formatDate(date)}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {time}
+                  </p>
                 </div>
               </div>
               
-              <div className="flex">
-                {type === 'online' ? (
-                  <Video className="h-5 w-5 text-gray-500 mr-3" />
+              <div className="flex items-start">
+                {type === "ONLINE" ? (
+                  <Video className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
                 ) : (
-                  <MapPin className="h-5 w-5 text-gray-500 mr-3" />
+                  <MapPin className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
                 )}
-                
                 <div>
-                  <p className="text-gray-700">
-                    {type === 'online' ? 'Video Consultation' : 'In-person Visit'}
+                  <p className="font-medium">
+                    {type === "ONLINE" ? "Online Consultation" : "In-person Visit"}
                   </p>
-                  <p className="text-gray-500">
-                    {type === 'online' 
-                      ? 'You will receive a link before the appointment' 
-                      : doctor.address}
+                  <p className="text-sm text-gray-500">
+                    {type === "ONLINE" 
+                      ? "Video call link will be sent before appointment" 
+                      : (typeof doctor.address === 'object' 
+                         ? `${doctor.address.street}, ${doctor.address.city}` 
+                         : doctor.location || "Address details will be sent")}
                   </p>
                 </div>
               </div>
+              
+              {reason && (
+                <div>
+                  <p className="font-medium mb-1">Reason for Visit</p>
+                  <p className="text-sm text-gray-600">{reason}</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
-        
-        {reason && (
-          <Card className="mb-6">
-            <CardContent className="p-4">
-              <h3 className="font-semibold mb-2">Reason for Visit</h3>
-              <p className="text-gray-600">{reason}</p>
-            </CardContent>
-          </Card>
-        )}
         
         <Card className="mb-8">
           <CardContent className="p-4">
@@ -138,19 +178,19 @@ export default function AppointmentConfirmation() {
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-600">Consultation Fee</span>
-                <span>$120.00</span>
+                <span>{formatCurrency(doctor.consultationFee || doctor.fee || 0)}</span>
               </div>
               
               <div className="flex justify-between">
                 <span className="text-gray-600">Service Fee</span>
-                <span>$5.00</span>
+                <span>{formatCurrency(50)}</span>
               </div>
               
               <Separator className="my-2" />
               
               <div className="flex justify-between font-semibold">
                 <span>Total Amount</span>
-                <span>$125.00</span>
+                <span>{formatCurrency((doctor.consultationFee || doctor.fee || 0) + 50)}</span>
               </div>
             </div>
           </CardContent>

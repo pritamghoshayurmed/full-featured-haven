@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { DoctorBottomNav } from "@/components/DoctorBottomNav";
 import { PageHeader } from "@/components/PageHeader";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 
 interface AppLayoutProps {
   children: ReactNode;

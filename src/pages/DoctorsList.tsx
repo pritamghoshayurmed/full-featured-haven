@@ -174,10 +174,10 @@ const DoctorsList: React.FC = () => {
                         </div>
                         <div className="mt-2">
                           <Badge variant="outline" className="mr-2">
-                            {doctor.experience || 'N/A'} yrs exp
+                            {typeof doctor.experience === 'number' ? `${doctor.experience} yrs exp` : 'Experience N/A'}
                           </Badge>
                           <Badge variant="secondary" className="bg-green-100 text-green-800">
-                            {doctor.availability || 'Contact for availability'}
+                            {typeof doctor.availability === 'string' ? doctor.availability : 'Contact for availability'}
                           </Badge>
                         </div>
                       </div>

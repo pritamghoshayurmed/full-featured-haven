@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
@@ -7,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Phone, Video } from "lucide-react";
 import { format } from "date-fns";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { getDoctorById, getConversationMessages } from "@/data/mockData";
 import { Message } from "@/types";
 

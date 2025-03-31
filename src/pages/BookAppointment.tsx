@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import { format } from "date-fns";
@@ -13,31 +12,83 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { getDoctorById, getTimeSlotsByDoctorAndDate } from "@/data/mockData";
 import { useToast } from "@/components/ui/use-toast";
+import doctorService from "@/services/doctor.service";
+import { appointmentService } from "@/services/appointment.service";
+import { useAuth } from "@/hooks/useAuth";
+import { AppointmentType } from "@/types";
 
 export default function BookAppointment() {
   const { doctorId } = useParams<{ doctorId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   
-  const doctor = getDoctorById(doctorId || "");
-  
+  const [doctor, setDoctor] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [selectedTime, setSelectedTime] = useState<string>("");
-  const [appointmentType, setAppointmentType] = useState<"online" | "in-person">("online");
+  const [endTime, setEndTime] = useState<string>("");
+  const [timeSlots, setTimeSlots] = useState<any[]>([]);
+  const [appointmentType, setAppointmentType] = useState<AppointmentType>("ONLINE");
   const [reason, setReason] = useState("");
   
-  // Get available time slots for the selected date
-  const timeSlots = date 
-    ? getTimeSlotsByDoctorAndDate(
-        doctorId || "", 
-        format(date, 'yyyy-MM-dd')
-      ) 
-    : [];
+  useEffect(() => {
+    const fetchDoctorDetails = async () => {
+      if (!doctorId) return;
+      
+      try {
+        setIsLoading(true);
+        const doctorData = await doctorService.getDoctorById(doctorId);
+        setDoctor(doctorData);
+      } catch (err: any) {
+        console.error('Error fetching doctor details:', err);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load doctor details. Please try again later.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchDoctorDetails();
+  }, [doctorId, toast]);
+
+  useEffect(() => {
+    const fetchTimeSlots = async () => {
+      if (!doctorId || !date) return;
+      
+      try {
+        const formattedDate = format(date, 'yyyy-MM-dd');
+        const slots = await doctorService.getDoctorTimeSlots(doctorId, formattedDate);
+        setTimeSlots(slots);
+      } catch (err) {
+        console.error('Error fetching time slots:', err);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load available time slots. Please try again later.",
+        });
+      }
+    };
+    
+    fetchTimeSlots();
+  }, [doctorId, date, toast]);
   
   // Handler for booking appointment
-  const handleBookAppointment = () => {
+  const handleBookAppointment = async () => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication required",
+        description: "Please login to book an appointment",
+      });
+      navigate("/login", { state: { from: `/book-appointment/${doctorId}` } });
+      return;
+    }
+    
     if (!date || !selectedTime) {
       toast({
         variant: "destructive",
@@ -47,18 +98,70 @@ export default function BookAppointment() {
       return;
     }
     
-    // In a real app, this would call an API to create the appointment
-    // For this demo, we'll just navigate to the confirmation page
-    navigate("/appointment-confirmation", {
-      state: {
+    try {
+      // Create appointment data
+      const appointmentData = {
         doctorId,
         date: format(date, 'yyyy-MM-dd'),
-        time: selectedTime,
+        startTime: selectedTime,
+        endTime: endTime || calculateEndTime(selectedTime),
         type: appointmentType,
-        reason,
-      }
-    });
+        reasonForVisit: reason,
+        symptoms: []
+      };
+      
+      // Create appointment
+      const appointment = await appointmentService.createAppointment(appointmentData);
+      
+      // Navigate to appointment confirmation page
+      navigate("/appointment-confirmation", {
+        state: {
+          appointmentId: appointment.id,
+          doctorId,
+          date: format(date, 'yyyy-MM-dd'),
+          time: selectedTime,
+          type: appointmentType,
+          reason,
+        }
+      });
+    } catch (error) {
+      console.error('Error booking appointment:', error);
+      toast({
+        variant: "destructive",
+        title: "Booking failed",
+        description: "Could not book appointment. Please try again later.",
+      });
+    }
   };
+  
+  // Helper to calculate end time (30 min default appointment)
+  const calculateEndTime = (startTime: string): string => {
+    const [hours, minutes] = startTime.split(':').map(Number);
+    let endHours = hours;
+    let endMinutes = minutes + 30;
+    
+    if (endMinutes >= 60) {
+      endHours += 1;
+      endMinutes -= 60;
+    }
+    
+    return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+  };
+  
+  const handleTimeSlotSelect = (slot: any) => {
+    setSelectedTime(slot.startTime);
+    setEndTime(slot.endTime);
+  };
+  
+  if (isLoading) {
+    return (
+      <AppLayout title="Book Appointment">
+        <div className="p-4 text-center">
+          <p>Loading doctor information...</p>
+        </div>
+      </AppLayout>
+    );
+  }
   
   if (!doctor) {
     return (
@@ -82,14 +185,17 @@ export default function BookAppointment() {
       <div className="bg-white p-4 border-b">
         <div className="flex items-center">
           <Avatar className="h-16 w-16">
-            <AvatarImage src={doctor.avatar} alt={doctor.name} />
+            <AvatarImage 
+              src={doctor.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor.name)}&background=random`} 
+              alt={doctor.name} 
+            />
             <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
           </Avatar>
           
           <div className="ml-3">
             <h2 className="font-semibold">{doctor.name}</h2>
             <p className="text-gray-500">{doctor.specialization}</p>
-            <p className="text-sm text-gray-500">{doctor.experience} experience</p>
+            <p className="text-sm text-gray-500">{doctor.experience} years experience</p>
           </div>
         </div>
       </div>
@@ -100,15 +206,15 @@ export default function BookAppointment() {
           <h3 className="font-semibold mb-3">Appointment Type</h3>
           <RadioGroup 
             value={appointmentType} 
-            onValueChange={(value) => setAppointmentType(value as "online" | "in-person")}
+            onValueChange={(value) => setAppointmentType(value as AppointmentType)}
             className="flex space-x-3"
           >
             <div className="flex items-center space-x-2 border rounded-lg p-3 flex-1">
-              <RadioGroupItem value="online" id="online" />
+              <RadioGroupItem value="ONLINE" id="online" />
               <Label htmlFor="online" className="cursor-pointer">Online</Label>
             </div>
             <div className="flex items-center space-x-2 border rounded-lg p-3 flex-1">
-              <RadioGroupItem value="in-person" id="in-person" />
+              <RadioGroupItem value="IN_PERSON" id="in-person" />
               <Label htmlFor="in-person" className="cursor-pointer">In-person</Label>
             </div>
           </RadioGroup>
@@ -142,11 +248,11 @@ export default function BookAppointment() {
                     className={`
                       py-3 px-2 rounded-lg text-center
                       ${!slot.isAvailable ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 
-                      selectedTime === slot.time ? 'bg-primary text-white' : 'border'}
+                      selectedTime === slot.startTime ? 'bg-primary text-white' : 'border'}
                     `}
-                    onClick={() => setSelectedTime(slot.time)}
+                    onClick={() => handleTimeSlotSelect(slot)}
                   >
-                    {slot.time}
+                    {slot.startTime}
                   </button>
                 ))}
               </div>

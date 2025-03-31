@@ -157,7 +157,11 @@ export default function DoctorDetail() {
           <h3 className="font-semibold mb-2">Location</h3>
           <div className="flex items-start text-gray-600 mb-2">
             <MapPin size={18} className="mr-2 flex-shrink-0 mt-0.5" />
-            <p>{doctor.address || doctor.location || 'Available for teleconsultation'}</p>
+            <p>
+              {typeof doctor.address === 'object' ? 
+                `${doctor.address.street}, ${doctor.address.city}, ${doctor.address.state}, ${doctor.address.zipCode}, ${doctor.address.country}` : 
+                (doctor.address || doctor.location || 'Available for teleconsultation')}
+            </p>
           </div>
           
           <div className="mt-4 mb-6">
@@ -168,12 +172,22 @@ export default function DoctorDetail() {
           <h3 className="font-semibold mb-2 mt-4">Availability</h3>
           <div className="flex items-center text-gray-600 mb-1">
             <Clock size={18} className="mr-2" />
-            <p>{doctor.availability || 'Monday - Friday: 9:00 AM - 5:00 PM'}</p>
+            <p>
+              {Array.isArray(doctor.availability) 
+                ? doctor.availability.map((slot: any, index: number) => (
+                    <span key={index} className="block">
+                      {slot.day}: {slot.startTime} - {slot.endTime}
+                    </span>
+                  ))
+                : (typeof doctor.availability === 'string' 
+                    ? doctor.availability 
+                    : 'Monday - Friday: 9:00 AM - 5:00 PM')}
+            </p>
           </div>
           {doctor.availability2 && (
             <div className="flex items-center text-gray-600">
               <Clock size={18} className="mr-2" />
-              <p>{doctor.availability2}</p>
+              <p>{typeof doctor.availability2 === 'string' ? doctor.availability2 : ''}</p>
             </div>
           )}
         </TabsContent>

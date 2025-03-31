@@ -27,6 +27,12 @@ router.get(
   patientController.getMedicalRecords
 );
 
+// Patient appointments
+router.get(
+  '/:id/appointments',
+  patientController.getPatientAppointments
+);
+
 // Doctor routes (doctor only)
 router.get(
   '/:id',

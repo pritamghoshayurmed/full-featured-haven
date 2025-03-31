@@ -148,23 +148,27 @@ export const register = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.log('Validation errors:', errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
 
   const { email, password } = req.body;
-  console.log('Login attempt:', { email, password });
+  console.log('Login attempt:', { email, password: '******' });
 
   try {
-    // FOR TESTING: Accept any credentials
-    // Create a mock token and user response
-    const mockToken = 'test-jwt-token-for-development-only';
-
-    // Find user by email if they exist, or create a mock user
-    let user = await User.findOne({ email });
+    // Find user by email
+    let user = await User.findOne({ email }).select('+password');
+    console.log('User found in database:', user ? 'Yes' : 'No');
     
     if (!user) {
-      console.log('User not found, creating mock user for testing');
+      console.log('User not found in database, creating mock user for testing');
       // Return a mock user for testing
+      const mockToken = jwt.sign(
+        { id: '60d0fe4f5311236168a109ca', role: email.includes('doctor') ? UserRole.DOCTOR : UserRole.PATIENT },
+        process.env.JWT_SECRET || 'fallbacksecret',
+        { expiresIn: process.env.JWT_EXPIRE || '30d' }
+      );
+      
       return res.status(200).json({
         success: true,
         token: mockToken,
@@ -179,23 +183,30 @@ export const login = async (req: Request, res: Response) => {
       });
     }
     
-    // If user exists but password doesn't match, accept it anyway for testing
-    console.log('User found:', user);
+    // Check if password matches
+    const isMatch = await user.matchPassword(password);
+    console.log('Password match result:', isMatch);
+    
+    // For testing purposes, we'll accept any password
+    if (!isMatch) {
+      console.log('Password does not match, but accepting for testing');
+    }
     
     // Create and send token
     const token = user.getSignedJwtToken();
+    console.log('Generated JWT token:', token ? 'Token generated successfully' : 'Failed to generate token');
 
     // Get user profile based on role
     let profile = null;
     if (user.role === UserRole.DOCTOR) {
       profile = await Doctor.findOne({ user: user._id });
+      console.log('Doctor profile found:', profile ? 'Yes' : 'No');
     } else if (user.role === UserRole.PATIENT) {
       profile = await Patient.findOne({ user: user._id });
+      console.log('Patient profile found:', profile ? 'Yes' : 'No');
     }
 
-    console.log('Login successful, returning user and token');
-    
-    res.status(200).json({
+    const responseData = {
       success: true,
       token,
       user: {
@@ -207,7 +218,11 @@ export const login = async (req: Request, res: Response) => {
         isVerified: user.isVerified,
         profileId: profile?._id
       }
-    });
+    };
+    
+    console.log('Login successful, returning user data:', JSON.stringify(responseData.user));
+    
+    res.status(200).json(responseData);
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({

@@ -9,9 +9,13 @@ const router = express.Router();
 router.get('/', doctorController.getDoctors);
 router.get('/top', doctorController.getTopDoctors);
 router.get('/:id', doctorController.getDoctor);
+router.get('/:id/reviews', doctorController.getDoctorReviews);
+router.get('/:id/availability', doctorController.getDoctorAvailability);
 
-// Protected doctor routes
+// Protected routes
 router.use(protect);
+
+// Doctor-only routes
 router.use(authorize(UserRole.DOCTOR));
 
 router.get('/dashboard/stats', doctorController.getDoctorDashboard);
@@ -22,8 +26,6 @@ router.put('/profile', doctorController.updateDoctorProfile);
 // Get shared AI chats
 router.get(
   '/ai-chats',
-  protect,
-  authorize(UserRole.DOCTOR),
   doctorController.getSharedAIChats
 );
 

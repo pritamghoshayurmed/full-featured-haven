@@ -264,4 +264,72 @@ export const getPatientById = async (req: Request, res: Response) => {
       message: 'Server error fetching patient'
     });
   }
+};
+
+// @desc    Get patient appointments
+// @route   GET /api/patients/:id/appointments
+// @access  Private
+export const getPatientAppointments = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Find patient by user ID or patient ID
+    let patientId = id;
+    
+    // If ID is not a valid MongoDB ObjectId, it might be a user ID
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      const patient = await Patient.findOne({ user: id });
+      if (!patient) {
+        return res.status(404).json({
+          success: false,
+          message: 'Patient not found'
+        });
+      }
+      patientId = patient._id.toString();
+    }
+    
+    // Get appointments
+    const appointments = await Appointment.find({ patient: patientId })
+      .populate({
+        path: 'doctor',
+        populate: {
+          path: 'user',
+          select: 'firstName lastName email profilePicture'
+        }
+      })
+      .sort({ date: -1, startTime: -1 });
+    
+    // Format appointments for frontend
+    const formattedAppointments = appointments.map(appointment => {
+      // Cast doctor to access nested properties
+      const doctor = appointment.doctor as any;
+      
+      return {
+        id: appointment._id,
+        doctorId: doctor._id,
+        doctorName: doctor.user ? `Dr. ${doctor.user.firstName} ${doctor.user.lastName}` : 'Doctor',
+        doctorSpecialization: doctor.specialization || 'General',
+        doctorProfilePicture: doctor.user?.profilePicture || '',
+        date: appointment.date,
+        time: `${appointment.startTime} - ${appointment.endTime}`,
+        startTime: appointment.startTime,
+        endTime: appointment.endTime,
+        status: appointment.status,
+        type: appointment.type,
+        reasonForVisit: appointment.reasonForVisit,
+        fee: appointment.fee || doctor.consultationFee
+      };
+    });
+    
+    res.status(200).json({
+      success: true,
+      data: formattedAppointments
+    });
+  } catch (error) {
+    console.error('Get patient appointments error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error fetching appointments'
+    });
+  }
 }; 

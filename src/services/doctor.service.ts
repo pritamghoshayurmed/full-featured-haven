@@ -1,7 +1,4 @@
-import axios from 'axios';
 import axiosInstance from '@/lib/axios';
-
-const API_URL = 'http://localhost:8000/api';
 
 const mockDoctors = [
   {

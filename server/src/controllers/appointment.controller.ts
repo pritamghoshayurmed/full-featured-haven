@@ -502,4 +502,54 @@ export const rescheduleAppointment = async (req: Request, res: Response) => {
   }
 };
 
+// @desc    Update appointment payment status
+// @route   PUT /api/appointments/:id/payment
+// @access  Private
+export const updatePaymentStatus = async (req: Request, res: Response) => {
+  try {
+    const { status } = req.body;
+
+    // Find appointment
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found'
+      });
+    }
+
+    // Update payment status
+    appointment.payment.status = status.toUpperCase();
+    
+    // If payment is completed, update appointment status to confirmed
+    if (status.toUpperCase() === 'PAID' || status.toUpperCase() === 'COMPLETED') {
+      appointment.status = AppointmentStatus.CONFIRMED;
+      
+      // Add earnings record for the doctor
+      const earning = new Earning({
+        doctor: appointment.doctor,
+        amount: appointment.fee,
+        type: EarningType.APPOINTMENT,
+        appointment: appointment._id
+      });
+      
+      await earning.save();
+    }
+
+    await appointment.save();
+
+    res.status(200).json({
+      success: true,
+      data: appointment,
+      message: 'Payment status updated successfully'
+    });
+  } catch (error) {
+    console.error('Update payment status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error updating payment status'
+    });
+  }
+};
+
  

@@ -53,4 +53,13 @@ router.put(
   appointmentController.rescheduleAppointment
 );
 
+// Update payment status
+router.put(
+  '/:id/payment',
+  [
+    check('status', 'Payment status is required').notEmpty()
+  ],
+  appointmentController.updatePaymentStatus
+);
+
 export default router; 

@@ -1,13 +1,14 @@
 import axios from 'axios';
+import axiosInstance from '@/lib/axios';
 import { User } from '@/types';
-
-const API_URL = 'http://localhost:8000/api';
 
 // Set token in localstorage and axios headers
 const setAuthToken = (token: string) => {
   if (token) {
     localStorage.setItem('token', token);
+    // Configure the global axios instance (this is still needed for other services)
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    // Our axios instance headers are set automatically through interceptors
   } else {
     localStorage.removeItem('token');
     delete axios.defaults.headers.common['Authorization'];
@@ -28,7 +29,7 @@ const initializeAuth = () => {
 const login = async (email: string, password: string) => {
   try {
     console.log('Attempting to login with:', { email });
-    const response = await axios.post(`${API_URL}/auth/login`, { email, password });
+    const response = await axiosInstance.post('/auth/login', { email, password });
     
     console.log('Login response:', response.data);
     
@@ -103,7 +104,7 @@ const register = async (name: string, email: string, password: string, phone: st
     };
     
     console.log('Attempting to register with:', { email });
-    const response = await axios.post(`${API_URL}/auth/register`, userData);
+    const response = await axiosInstance.post('/auth/register', userData);
     
     console.log('Registration response:', response.data);
     

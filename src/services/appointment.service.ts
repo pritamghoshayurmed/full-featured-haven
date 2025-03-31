@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = 'http://localhost:8000/api';
+import axiosInstance from '@/lib/axios';
 
 // Mock appointments data for fallback
 const mockAppointments = [
@@ -49,7 +47,7 @@ const mockAppointments = [
 // Get user appointments (for patient)
 const getUserAppointments = async (userId: string) => {
   try {
-    const response = await axios.get(`${API_URL}/patients/${userId}/appointments`);
+    const response = await axiosInstance.get(`/patients/${userId}/appointments`);
     return response.data.data;
   } catch (error: any) {
     console.error('Error fetching user appointments:', error);
@@ -65,7 +63,7 @@ const getUserAppointments = async (userId: string) => {
 // Get doctor appointments
 const getDoctorAppointments = async (doctorId: string) => {
   try {
-    const response = await axios.get(`${API_URL}/doctors/${doctorId}/appointments`);
+    const response = await axiosInstance.get(`/doctors/${doctorId}/appointments`);
     return response.data.data;
   } catch (error: any) {
     console.error('Error fetching doctor appointments:', error);
@@ -81,7 +79,7 @@ const getDoctorAppointments = async (doctorId: string) => {
 // Get appointment by ID
 const getAppointmentById = async (appointmentId: string) => {
   try {
-    const response = await axios.get(`${API_URL}/appointments/${appointmentId}`);
+    const response = await axiosInstance.get(`/appointments/${appointmentId}`);
     return response.data.data;
   } catch (error: any) {
     console.error('Error fetching appointment:', error);
@@ -97,7 +95,7 @@ const getAppointmentById = async (appointmentId: string) => {
 // Create a new appointment
 const createAppointment = async (appointmentData: any) => {
   try {
-    const response = await axios.post(`${API_URL}/appointments`, appointmentData);
+    const response = await axiosInstance.post(`/appointments`, appointmentData);
     return response.data.data;
   } catch (error) {
     console.error('Error creating appointment:', error);
@@ -108,7 +106,7 @@ const createAppointment = async (appointmentData: any) => {
 // Cancel an appointment
 const cancelAppointment = async (appointmentId: string) => {
   try {
-    const response = await axios.put(`${API_URL}/appointments/${appointmentId}/cancel`);
+    const response = await axiosInstance.put(`/appointments/${appointmentId}/cancel`);
     return response.data.data;
   } catch (error) {
     console.error('Error cancelling appointment:', error);
@@ -119,10 +117,21 @@ const cancelAppointment = async (appointmentId: string) => {
 // Reschedule an appointment
 const rescheduleAppointment = async (appointmentId: string, newData: { date: string, time: string }) => {
   try {
-    const response = await axios.put(`${API_URL}/appointments/${appointmentId}/reschedule`, newData);
+    const response = await axiosInstance.put(`/appointments/${appointmentId}/reschedule`, newData);
     return response.data.data;
   } catch (error) {
     console.error('Error rescheduling appointment:', error);
+    throw error;
+  }
+};
+
+// Update payment status of an appointment
+const updatePaymentStatus = async (appointmentId: string, status: string) => {
+  try {
+    const response = await axiosInstance.put(`/appointments/${appointmentId}/payment`, { status });
+    return response.data.data;
+  } catch (error) {
+    console.error('Error updating payment status:', error);
     throw error;
   }
 };
@@ -133,7 +142,8 @@ export const appointmentService = {
   getAppointmentById,
   createAppointment,
   cancelAppointment,
-  rescheduleAppointment
+  rescheduleAppointment,
+  updatePaymentStatus
 };
 
 export default appointmentService; 

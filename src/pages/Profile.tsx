@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { 
   Bell, 
@@ -15,7 +14,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function Profile() {
