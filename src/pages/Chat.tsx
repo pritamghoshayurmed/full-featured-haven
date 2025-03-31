@@ -1,142 +1,313 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Search } from "lucide-react";
-import { AppLayout } from "@/components/AppLayout";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
-import { useAuth } from "@/contexts/AuthContext";
-import { getAllDoctors, getConversationMessages } from "@/data/mockData";
+import React, { useEffect, useRef, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { useChat } from '@/contexts/ChatContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { 
+  Card, 
+  CardContent, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import { 
+  Send, 
+  User, 
+  Clock, 
+  Search,
+  Loader2 
+} from 'lucide-react';
+import { formatDate, formatTime, cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { UserRole } from '@/types/user';
 
-export default function Chat() {
+const Chat: React.FC = () => {
+  const { chatId } = useParams<{ chatId: string }>();
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const { 
+    chats, 
+    currentChat, 
+    messages, 
+    loadingChats,
+    loadingMessages,
+    loadChats,
+    loadChat,
+    createOrGetChat,
+    sendMessage
+  } = useChat();
   
-  const [searchQuery, setSearchQuery] = useState("");
-  
-  const doctors = getAllDoctors();
-  
-  // Filter doctors based on search query
-  const filteredDoctors = searchQuery
-    ? doctors.filter(doc =>
-        doc.name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : doctors;
-  
-  // Get last message for each doctor
-  const getLastMessage = (doctorId: string) => {
-    if (!user) return null;
+  const [messageText, setMessageText] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Load chats on component mount
+  useEffect(() => {
+    loadChats();
+  }, []);
+
+  // Load specific chat when chatId changes
+  useEffect(() => {
+    if (chatId) {
+      loadChat(chatId);
+    }
+  }, [chatId]);
+
+  // Scroll to bottom whenever messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!messageText.trim()) return;
     
-    const messages = getConversationMessages(user.id, doctorId);
-    return messages.length > 0 ? messages[messages.length - 1] : null;
-  };
-  
-  // Format timestamp for display
-  const formatTimestamp = (timestamp: string) => {
     try {
-      const date = new Date(timestamp);
-      const now = new Date();
-      
-      // If today, display time
-      if (
-        date.getDate() === now.getDate() &&
-        date.getMonth() === now.getMonth() &&
-        date.getFullYear() === now.getFullYear()
-      ) {
-        return format(date, "h:mm a");
-      }
-      
-      // If this week
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - now.getDay());
-      if (date >= weekStart) {
-        return format(date, "EEE");
-      }
-      
-      // Otherwise, display date
-      return format(date, "MM/dd/yy");
-    } catch (e) {
-      return timestamp;
+      await sendMessage(messageText);
+      setMessageText('');
+    } catch (error) {
+      console.error('Error sending message:', error);
     }
   };
-  
-  // Sort doctors by last message time
-  const sortedDoctors = [...filteredDoctors].sort((a, b) => {
-    const lastMsgA = getLastMessage(a.id);
-    const lastMsgB = getLastMessage(b.id);
+
+  // Filter chats based on search term
+  const filteredChats = chats.filter(chat => {
+    if (!searchTerm) return true;
     
-    if (!lastMsgA && !lastMsgB) return 0;
-    if (!lastMsgA) return 1;
-    if (!lastMsgB) return -1;
+    // Find the other participant (not the current user)
+    const otherParticipant = chat.participants.find(p => p.id !== user?.id);
+    if (!otherParticipant) return false;
     
-    return new Date(lastMsgB.timestamp).getTime() - new Date(lastMsgA.timestamp).getTime();
+    const name = `${otherParticipant.firstName} ${otherParticipant.lastName}`;
+    return name.toLowerCase().includes(searchTerm.toLowerCase());
   });
-  
+
   return (
-    <AppLayout title="Messages" showBack={false}>
-      <div className="p-4">
-        {/* Search */}
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-          <Input
-            placeholder="Search conversations..."
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 h-[calc(100vh-4rem)]">
+      {/* Chats sidebar */}
+      <div className="md:col-span-1 border rounded-lg overflow-hidden">
+        <div className="p-4 border-b">
+          <h2 className="font-bold text-lg mb-2">Messages</h2>
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search contacts"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
         </div>
         
-        {/* Chat list */}
-        <div className="space-y-2">
-          {sortedDoctors.map(doctor => {
-            const lastMessage = getLastMessage(doctor.id);
-            
-            return (
-              <button
-                key={doctor.id}
-                className="w-full flex items-center p-3 rounded-lg hover:bg-gray-50 transition-colors text-left"
-                onClick={() => navigate(`/chat/${doctor.id}`)}
-              >
-                <div className="relative">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={doctor.avatar} alt={doctor.name} />
-                    <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-                </div>
+        <ScrollArea className="h-[calc(100vh-11rem)]">
+          {loadingChats ? (
+            <div className="flex justify-center items-center h-20">
+              <Loader2 className="h-5 w-5 animate-spin" />
+            </div>
+          ) : filteredChats.length === 0 ? (
+            <div className="p-4 text-center text-muted-foreground">
+              {searchTerm ? 'No contacts found' : 'No conversations yet'}
+            </div>
+          ) : (
+            <div className="divide-y">
+              {filteredChats.map(chat => {
+                // Find the other participant (not the current user)
+                const otherParticipant = chat.participants.find(p => p.id !== user?.id);
                 
-                <div className="ml-3 flex-1 min-w-0">
-                  <div className="flex justify-between">
-                    <h3 className="font-medium text-gray-900 truncate">{doctor.name}</h3>
-                    {lastMessage && (
-                      <span className="text-xs text-gray-500">
-                        {formatTimestamp(lastMessage.timestamp)}
-                      </span>
+                return (
+                  <Link 
+                    key={chat._id} 
+                    to={`/chat/${chat._id}`}
+                    className={cn(
+                      "block p-4 hover:bg-accent transition-colors",
+                      currentChat?._id === chat._id && "bg-accent"
                     )}
-                  </div>
-                  
-                  <p className="text-sm text-gray-500 truncate">
-                    {lastMessage 
-                      ? lastMessage.content 
-                      : "No messages yet"}
-                  </p>
-                </div>
-                
-                {lastMessage && !lastMessage.read && lastMessage.senderId === doctor.id && (
-                  <Badge className="ml-2 bg-primary">New</Badge>
-                )}
-              </button>
-            );
-          })}
-          
-          {filteredDoctors.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No conversations found</p>
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        {otherParticipant?.profilePicture ? (
+                          <img 
+                            src={otherParticipant.profilePicture} 
+                            alt={otherParticipant.firstName}
+                            className="w-10 h-10 rounded-full object-cover"
+                          />
+                        ) : (
+                          <User className="h-5 w-5" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start">
+                          <h3 className="font-medium truncate">
+                            {otherParticipant?.firstName} {otherParticipant?.lastName}
+                          </h3>
+                          <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                            {formatDate(chat.updatedAt)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {chat.latestMessage || "No messages yet"}
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           )}
-        </div>
+        </ScrollArea>
       </div>
-    </AppLayout>
+      
+      {/* Chat area */}
+      <div className="md:col-span-2 lg:col-span-3 border rounded-lg overflow-hidden flex flex-col">
+        {currentChat ? (
+          <>
+            <CardHeader className="px-4 py-3 border-b">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {currentChat.participants.find(p => p.id !== user?.id)?.profilePicture ? (
+                    <img 
+                      src={currentChat.participants.find(p => p.id !== user?.id)?.profilePicture} 
+                      alt="Profile" 
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User className="h-5 w-5" />
+                    </div>
+                  )}
+                  <div>
+                    <CardTitle className="text-lg">
+                      {currentChat.participants.find(p => p.id !== user?.id)?.firstName} {currentChat.participants.find(p => p.id !== user?.id)?.lastName}
+                    </CardTitle>
+                    {user?.role === UserRole.PATIENT && (
+                      <p className="text-sm text-muted-foreground">
+                        {currentChat.participants.find(p => p.role === UserRole.DOCTOR)?.doctorProfile?.specialization}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    Last active {formatTime(currentChat.updatedAt)}
+                  </span>
+                </div>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+              {loadingMessages ? (
+                <div className="flex justify-center items-center h-20">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <User className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-medium mb-1">Start a conversation</h3>
+                  <p className="text-muted-foreground">
+                    Send a message to start chatting with {currentChat.participants.find(p => p.id !== user?.id)?.firstName}
+                  </p>
+                </div>
+              ) : (
+                messages.map((message, index) => {
+                  const isCurrentUser = message.sender.id === user?.id;
+                  const showAvatar = index === 0 || messages[index - 1].sender.id !== message.sender.id;
+                  
+                  return (
+                    <div 
+                      key={message.id} 
+                      className={cn(
+                        "flex gap-3",
+                        isCurrentUser ? "justify-end" : "justify-start"
+                      )}
+                    >
+                      {!isCurrentUser && showAvatar && (
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex-shrink-0 flex items-center justify-center self-end">
+                          {message.sender.profilePicture ? (
+                            <img 
+                              src={message.sender.profilePicture} 
+                              alt={message.sender.firstName}
+                              className="w-8 h-8 rounded-full object-cover"
+                            />
+                          ) : (
+                            <User className="h-4 w-4" />
+                          )}
+                        </div>
+                      )}
+                      
+                      <div 
+                        className={cn(
+                          "max-w-[70%] rounded-lg p-3 relative group",
+                          isCurrentUser 
+                            ? "bg-primary text-primary-foreground rounded-br-none" 
+                            : "bg-accent rounded-bl-none"
+                        )}
+                      >
+                        <p>{message.content}</p>
+                        <span className="text-xs opacity-70 text-right block mt-1">
+                          {formatTime(message.createdAt)}
+                        </span>
+                      </div>
+                      
+                      {isCurrentUser && showAvatar && (
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex-shrink-0 flex items-center justify-center self-end">
+                          {user?.profilePicture ? (
+                            <img 
+                              src={user.profilePicture} 
+                              alt={user.firstName}
+                              className="w-8 h-8 rounded-full object-cover"
+                            />
+                          ) : (
+                            <User className="h-4 w-4" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+              <div ref={messagesEndRef} />
+            </CardContent>
+            
+            <CardFooter className="p-4 border-t">
+              <form onSubmit={handleSendMessage} className="flex w-full items-center gap-2">
+                <Input
+                  type="text"
+                  placeholder="Type a message..."
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  className="flex-1"
+                />
+                <Button type="submit" disabled={!messageText.trim()}>
+                  <Send className="h-4 w-4" />
+                </Button>
+              </form>
+            </CardFooter>
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-center p-4">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+              <User className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="text-lg font-medium mb-1">Select a conversation</h3>
+            <p className="text-muted-foreground mb-4">
+              Choose a contact from the list or start a new conversation
+            </p>
+            
+            {user?.role === UserRole.PATIENT && (
+              <Link to="/doctors">
+                <Button>
+                  Find a Doctor
+                </Button>
+              </Link>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
-}
+};
+
+export default Chat;

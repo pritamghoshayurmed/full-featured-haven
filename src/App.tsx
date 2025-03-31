@@ -1,10 +1,11 @@
-
+import React from 'react';
+import { AuthProvider } from './contexts/AuthContext';
+import { ChatProvider } from './contexts/ChatContext';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 // Auth pages
@@ -31,8 +32,16 @@ import ChatDetail from "@/pages/ChatDetail";
 import Profile from "@/pages/Profile";
 import EditProfile from "@/pages/EditProfile";
 import DoctorDashboard from "@/pages/doctor/DoctorDashboard";
+import DoctorAiAssistant from "@/pages/doctor/AiAssistant";
+import DoctorAnalytics from "@/pages/doctor/Analytics";
+import PatientRecords from "@/pages/doctor/PatientRecords";
+import DoctorAppointments from "@/pages/doctor/DoctorAppointments";
+import DoctorChat from "@/pages/doctor/DoctorChat";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AiAssistant from "@/pages/AiAssistant";
+import AIChat from "@/pages/AIChat";
+import DoctorsList from "@/pages/DoctorsList";
+import Layout from "@/components/Layout";
 
 // 404 page
 import NotFound from "@/pages/NotFound";
@@ -42,49 +51,101 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Auth routes */}
-            <Route path="/" element={<Welcome />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/otp-verification" element={<OtpVerification />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            
-            {/* Protected routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/doctors" element={<DoctorList />} />
-              <Route path="/doctors/:id" element={<DoctorDetail />} />
-              <Route path="/book-appointment/:doctorId" element={<BookAppointment />} />
-              <Route path="/appointment-confirmation" element={<AppointmentConfirmation />} />
-              <Route path="/payment-methods" element={<PaymentMethods />} />
-              <Route path="/payment-checkout/:appointmentId" element={<PaymentCheckout />} />
-              <Route path="/payment-success" element={<PaymentSuccess />} />
-              <Route path="/appointments" element={<Appointments />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/chat" element={<Chat />} />
-              <Route path="/chat/:id" element={<ChatDetail />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/profile/edit" element={<EditProfile />} />
-              <Route path="/ai-assistant" element={<AiAssistant />} />
+      <ChatProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <Router>
+            <Routes>
+              {/* Auth routes */}
+              <Route path="/" element={<Welcome />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/otp-verification" element={<OtpVerification />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               
-              {/* Doctor routes */}
-              <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
+              {/* Protected routes */}
+              <Route element={<Layout />}>
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/profile" element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/appointments" element={
+                  <ProtectedRoute>
+                    <Appointments />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/chat" element={
+                  <ProtectedRoute>
+                    <Chat />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/chat/:chatId" element={
+                  <ProtectedRoute>
+                    <Chat />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/ai" element={
+                  <ProtectedRoute>
+                    <AIChat />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/ai/:chatId" element={
+                  <ProtectedRoute>
+                    <AIChat />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/doctors" element={
+                  <ProtectedRoute>
+                    <DoctorsList />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/doctors/:id" element={<DoctorDetail />} />
+                <Route path="/book-appointment/:doctorId" element={<BookAppointment />} />
+                <Route path="/appointment-confirmation" element={<AppointmentConfirmation />} />
+                <Route path="/payment-methods" element={<PaymentMethods />} />
+                <Route path="/payment-checkout/:appointmentId" element={<PaymentCheckout />} />
+                <Route path="/payment-success" element={<PaymentSuccess />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/chat/:id" element={<ChatDetail />} />
+                <Route path="/profile/edit" element={<EditProfile />} />
+                <Route path="/ai-assistant" element={<AiAssistant />} />
+                
+                {/* Doctor routes */}
+                <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
+                <Route path="/doctor/ai-assistant" element={<DoctorAiAssistant />} />
+                <Route path="/doctor/analytics" element={<DoctorAnalytics />} />
+                <Route path="/doctor/patients" element={<PatientRecords />} />
+                <Route path="/doctor/appointments" element={<DoctorAppointments />} />
+                <Route path="/doctor/chat" element={<DoctorChat />} />
+                
+                {/* Admin routes */}
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              </Route>
               
-              {/* Admin routes */}
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            </Route>
-            
-            {/* 404 route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+              {/* 404 route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Router>
+        </TooltipProvider>
+      </ChatProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

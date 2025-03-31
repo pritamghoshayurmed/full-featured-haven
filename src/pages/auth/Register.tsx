@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,12 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState("patient");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { register } = useAuth();
@@ -24,7 +25,7 @@ export default function Register() {
     setIsSubmitting(true);
     
     try {
-      await register(name, email, password, phone);
+      await register(name, email, password, phone, role);
       toast({
         title: "Account created",
         description: "Your account has been created successfully. Please check your email to verify your account.",
@@ -62,6 +63,19 @@ export default function Register() {
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="role">Register As</Label>
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger className="w-full py-6">
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="patient">Patient</SelectItem>
+                <SelectItem value="doctor">Doctor</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="name">Full Name</Label>
             <Input

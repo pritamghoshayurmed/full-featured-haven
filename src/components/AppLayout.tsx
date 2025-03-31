@@ -1,7 +1,8 @@
-
 import { ReactNode } from "react";
 import { BottomNav } from "@/components/BottomNav";
+import { DoctorBottomNav } from "@/components/DoctorBottomNav";
 import { PageHeader } from "@/components/PageHeader";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -22,6 +23,9 @@ export function AppLayout({
   showNotifications = true,
   fullHeight = false,
 }: AppLayoutProps) {
+  const { user } = useAuth();
+  const isDoctor = user?.role === "doctor";
+  
   return (
     <div className={`${fullHeight ? 'h-screen' : 'min-h-screen'} flex flex-col bg-gray-50`}>
       {showHeader && (
@@ -36,7 +40,9 @@ export function AppLayout({
         {children}
       </main>
       
-      {showNav && <BottomNav />}
+      {showNav && (
+        isDoctor ? <DoctorBottomNav /> : <BottomNav />
+      )}
     </div>
   );
 }

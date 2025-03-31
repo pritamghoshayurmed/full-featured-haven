@@ -1,4 +1,3 @@
-
 import { Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { User } from "@/types";
@@ -11,10 +10,11 @@ interface DoctorCardProps {
 }
 
 export function DoctorCard({ doctor, compact = false }: DoctorCardProps) {
-  const { id, name, specialization, rating, reviews, avatar, experience } = doctor;
+  const { id, name, specialization, rating = 4.5, reviews = 0, avatar, experience = 0 } = doctor;
   
   // Get initials for avatar fallback
   const getInitials = (name: string) => {
+    if (!name) return "DR";
     return name
       .split(' ')
       .map(word => word[0])

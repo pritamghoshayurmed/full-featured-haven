@@ -1,5 +1,4 @@
-
-import { Appointment, DoctorSpecialization, Message, Notification, PaymentMethod, Review, TimeSlot, User } from "@/types";
+import { Appointment, DoctorSpecialization, Message, Notification, PaymentMethod, Review, TimeSlot, User, MedicalRecord, PatientHealth, AiAnalysis } from "@/types";
 
 // Doctor specializations
 export const specializations: DoctorSpecialization[] = [
@@ -272,6 +271,113 @@ export const paymentMethods: PaymentMethod[] = [
   }
 ];
 
+// Medical Records
+export const medicalRecords: MedicalRecord[] = [
+  {
+    id: "rec1",
+    patientId: "user1",
+    doctorId: "1",
+    date: "2023-10-15",
+    type: "prescription",
+    title: "Hypertension Medication",
+    description: "Prescription for Lisinopril 10mg, once daily.",
+    fileUrl: "/lovable-uploads/prescription1.pdf",
+    isPrivate: false
+  },
+  {
+    id: "rec2",
+    patientId: "user1",
+    doctorId: "2",
+    date: "2023-09-20",
+    type: "diagnosis",
+    title: "Migraine Assessment",
+    description: "Patient presented with recurring migraines. Recommended treatment plan and lifestyle changes.",
+    notes: "Patient should avoid triggers like caffeine and maintain regular sleep schedule.",
+    isPrivate: false
+  },
+  {
+    id: "rec3",
+    patientId: "user1",
+    doctorId: "3",
+    date: "2023-11-05",
+    type: "lab_result",
+    title: "Blood Test Results",
+    description: "Complete blood count and lipid profile results.",
+    fileUrl: "/lovable-uploads/bloodtest.pdf",
+    notes: "Cholesterol slightly elevated. Recommended dietary changes.",
+    isPrivate: true
+  },
+  {
+    id: "rec4",
+    patientId: "user1",
+    doctorId: "4",
+    date: "2023-10-30",
+    type: "report",
+    title: "Skin Examination",
+    description: "Annual skin cancer screening report.",
+    notes: "No concerning lesions found. Recommended annual follow-up.",
+    isPrivate: false
+  }
+];
+
+// Patient Health Profiles
+export const patientHealthProfiles: PatientHealth[] = [
+  {
+    id: "health1",
+    patientId: "user1",
+    healthMetrics: {
+      height: 175,
+      weight: 72,
+      bloodPressure: "130/85",
+      bloodSugar: 95,
+      heartRate: 72,
+      temperature: 36.6,
+      oxygenLevel: 98
+    },
+    allergies: ["Penicillin", "Peanuts"],
+    chronicConditions: ["Hypertension", "Migraine"],
+    medications: [
+      {
+        name: "Lisinopril",
+        dosage: "10mg",
+        frequency: "Once daily",
+        startDate: "2023-09-01"
+      },
+      {
+        name: "Sumatriptan",
+        dosage: "50mg",
+        frequency: "As needed for migraine",
+        startDate: "2023-08-15"
+      }
+    ],
+    familyHistory: "Father had hypertension, Mother had diabetes type 2",
+    lastUpdated: "2023-11-10"
+  }
+];
+
+// AI Analyses
+export const aiAnalyses: AiAnalysis[] = [
+  {
+    id: "ai1",
+    medicalRecordId: "rec3",
+    generatedDate: "2023-11-06",
+    summary: "Blood test results show slightly elevated cholesterol levels but otherwise normal values across all markers.",
+    keyFindings: [
+      "Total cholesterol: 210 mg/dL (borderline high)",
+      "LDL cholesterol: 130 mg/dL (borderline high)",
+      "HDL cholesterol: 45 mg/dL (good)",
+      "Triglycerides: 150 mg/dL (normal)"
+    ],
+    recommendations: [
+      "Consider dietary modifications to reduce cholesterol intake",
+      "Increase physical activity to at least 150 minutes per week",
+      "Follow up blood test in 3 months to monitor progress"
+    ],
+    abnormalResults: ["Total cholesterol", "LDL cholesterol"],
+    confidence: 0.92
+  }
+];
+
 // Get time slots for a specific doctor and date
 export const getTimeSlotsByDoctorAndDate = (doctorId: string, date: string): TimeSlot[] => {
   // Generate current hour and add 1 to start from next hour
@@ -340,4 +446,17 @@ export const getAllDoctors = (): User[] => {
 // Get all users
 export const getAllUsers = (): User[] => {
   return users;
+};
+
+// Helper functions
+export const getUserMedicalRecords = (patientId: string): MedicalRecord[] => {
+  return medicalRecords.filter(record => record.patientId === patientId);
+};
+
+export const getPatientHealthProfile = (patientId: string): PatientHealth | undefined => {
+  return patientHealthProfiles.find(profile => profile.patientId === patientId);
+};
+
+export const getRecordAnalysis = (recordId: string): AiAnalysis | undefined => {
+  return aiAnalyses.find(analysis => analysis.medicalRecordId === recordId);
 };

@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, Star, Bot } from "lucide-react";
+import { Search, Star, Bot, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/AppLayout";
 import { DoctorCard } from "@/components/DoctorCard";
@@ -10,16 +9,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import doctorService from "@/services/doctor.service";
+import appointmentService from "@/services/appointment.service";
 import { 
-  getAllDoctors, 
   specializations, 
-  getUserAppointments 
 } from "@/data/mockData";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const [doctors, setDoctors] = useState<any[]>([]);
+  const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Redirect to appropriate dashboard based on role
   useEffect(() => {
@@ -30,18 +32,67 @@ export default function Dashboard() {
     }
   }, [user, navigate]);
   
-  const doctors = getAllDoctors();
-  const upcomingAppointments = getUserAppointments(user?.id || "").filter(apt => 
-    new Date(apt.date) >= new Date() && apt.status !== 'cancelled'
-  ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  // Fetch top doctors and upcoming appointments
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Fetch top doctors
+        const topDoctorsData = await doctorService.getTopDoctors();
+        // Map the data to ensure id property exists
+        const formattedDoctors = topDoctorsData?.map(doctor => ({
+          ...doctor,
+          id: doctor.id || doctor._id // Ensure id property exists
+        })) || [];
+        setDoctors(formattedDoctors);
+        
+        // Fetch upcoming appointments if user is logged in
+        if (user?.id) {
+          const appointmentsData = await appointmentService.getUserAppointments(user.id);
+          if (appointmentsData) {
+            const upcoming = appointmentsData
+              .filter((apt: any) => 
+                new Date(apt.date) >= new Date() && 
+                apt.status !== 'cancelled'
+              )
+              .sort((a: any, b: any) => 
+                new Date(a.date).getTime() - new Date(b.date).getTime()
+              );
+            setUpcomingAppointments(upcoming);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchDashboardData();
+  }, [user]);
   
   // Get next appointment
   const nextAppointment = upcomingAppointments[0];
   
   // Get doctor for next appointment
-  const nextAppointmentDoctor = nextAppointment 
-    ? doctors.find(doc => doc.id === nextAppointment.doctorId) 
-    : null;
+  const [nextAppointmentDoctor, setNextAppointmentDoctor] = useState<any>(null);
+  
+  // Fetch doctor details for next appointment
+  useEffect(() => {
+    const fetchDoctorForNextAppointment = async () => {
+      if (nextAppointment && nextAppointment.doctorId) {
+        try {
+          const doctorData = await doctorService.getDoctorById(nextAppointment.doctorId);
+          setNextAppointmentDoctor(doctorData);
+        } catch (error) {
+          console.error("Error fetching doctor for next appointment:", error);
+        }
+      }
+    };
+    
+    fetchDoctorForNextAppointment();
+  }, [nextAppointment]);
   
   // Format date for display
   const formatAppointmentDate = (dateString: string) => {
@@ -76,18 +127,34 @@ export default function Dashboard() {
     });
   };
   
+  // Handle search
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      navigate(`/doctors?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+  
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+  
   return (
     <AppLayout title="Home" showBack={false}>
       <div className="p-4">
         {/* User greeting */}
         <div className="flex items-center mb-6">
           <Avatar className="h-12 w-12">
-            <AvatarImage src={user?.avatar} alt={user?.name} />
-            <AvatarFallback>{user?.name.charAt(0)}</AvatarFallback>
+            <AvatarImage 
+              src={user?.profilePicture || user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&background=random`} 
+              alt={user?.name} 
+            />
+            <AvatarFallback>{user?.name?.charAt(0) || 'U'}</AvatarFallback>
           </Avatar>
           <div className="ml-3">
             <p className="text-gray-500">Good Morning, 👋</p>
-            <h2 className="font-semibold text-lg">{user?.name}</h2>
+            <h2 className="font-semibold text-lg">{user?.name || 'Guest'}</h2>
           </div>
         </div>
         
@@ -104,7 +171,7 @@ export default function Dashboard() {
               </div>
             </div>
             <Button 
-              onClick={() => navigate("/ai-assistant")}
+              onClick={() => navigate("/ai")}
               className="mt-3 w-full bg-white text-blue-600 hover:bg-white/90"
             >
               Talk to KABIRAJ AI
@@ -120,6 +187,7 @@ export default function Dashboard() {
             className="pl-10 py-6"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyPress={handleKeyPress}
           />
         </div>
         
@@ -136,8 +204,11 @@ export default function Dashboard() {
             <div className="border rounded-lg overflow-hidden bg-white p-4">
               <div className="flex items-center">
                 <Avatar className="h-16 w-16">
-                  <AvatarImage src={nextAppointmentDoctor.avatar} alt={nextAppointmentDoctor.name} />
-                  <AvatarFallback>{nextAppointmentDoctor.name.charAt(0)}</AvatarFallback>
+                  <AvatarImage 
+                    src={nextAppointmentDoctor.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(nextAppointmentDoctor.name)}&background=random`} 
+                    alt={nextAppointmentDoctor.name} 
+                  />
+                  <AvatarFallback>{nextAppointmentDoctor.name?.charAt(0) || 'D'}</AvatarFallback>
                 </Avatar>
                 
                 <div className="ml-4">
@@ -147,7 +218,7 @@ export default function Dashboard() {
                   <div className="flex items-center mt-1">
                     <div className="flex items-center">
                       <Star size={14} className="text-yellow-400 fill-yellow-400" />
-                      <span className="ml-1 text-sm">{nextAppointmentDoctor.rating}</span>
+                      <span className="ml-1 text-sm">{nextAppointmentDoctor.rating || '4.5'}</span>
                     </div>
                   </div>
                 </div>
@@ -176,7 +247,7 @@ export default function Dashboard() {
             {specializations.slice(0, 8).map((spec) => (
               <button
                 key={spec.id}
-                onClick={() => navigate(`/doctors?spec=${spec.name}`)}
+                onClick={() => navigate(`/doctors?spec=${encodeURIComponent(spec.name)}`)}
                 className="flex flex-col items-center p-3 bg-white rounded-lg border hover:border-primary transition-colors"
               >
                 <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mb-2">
@@ -206,11 +277,21 @@ export default function Dashboard() {
             </Link>
           </div>
           
-          <div className="space-y-4">
-            {doctors.slice(0, 3).map(doctor => (
-              <DoctorCard key={doctor.id} doctor={doctor} />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : doctors.length > 0 ? (
+            <div className="space-y-4">
+              {doctors.slice(0, 4).map((doctor: any) => (
+                <DoctorCard key={doctor.id} doctor={doctor} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 border rounded-lg">
+              <p className="text-gray-500">No doctors found</p>
+            </div>
+          )}
           
           <Button 
             onClick={() => navigate("/doctors")} 

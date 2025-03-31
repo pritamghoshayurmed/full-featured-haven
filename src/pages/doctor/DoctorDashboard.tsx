@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, X, Calendar, Clock, FileText } from "lucide-react";
+import { Check, X, Calendar, Clock, FileText, DollarSign, Users, Activity, Brain, BarChart } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -18,6 +17,11 @@ export default function DoctorDashboard() {
   const [activeTab, setActiveTab] = useState("upcoming");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patients, setPatients] = useState<User[]>([]);
+  const [earnings, setEarnings] = useState({
+    total: 0,
+    monthly: 0,
+    weekly: 0
+  });
   
   useEffect(() => {
     // Redirect if not a doctor
@@ -26,13 +30,19 @@ export default function DoctorDashboard() {
     }
     
     // Fetch doctor's appointments
-    // In a real app, this would filter server-side
     const allAppointments = getUserAppointments(user?.id || "");
     setAppointments(allAppointments);
     
-    // Get all patients (simplified - in a real app this would come from API)
+    // Get all patients
     const allUsers = getAllUsers().filter(u => u.role === "patient");
     setPatients(allUsers);
+
+    // Calculate earnings (mock data)
+    setEarnings({
+      total: 25000,
+      monthly: 5000,
+      weekly: 1200
+    });
   }, [user]);
   
   const upcomingAppointments = appointments.filter(apt => 
@@ -42,6 +52,12 @@ export default function DoctorDashboard() {
   const pastAppointments = appointments.filter(apt => 
     new Date(apt.date) < new Date() || apt.status === 'completed'
   );
+
+  const todayAppointments = upcomingAppointments.filter(apt => {
+    const today = new Date();
+    const aptDate = new Date(apt.date);
+    return aptDate.toDateString() === today.toDateString();
+  });
   
   const handleAcceptAppointment = (appointmentId: string) => {
     setAppointments(apps => 
@@ -67,43 +83,77 @@ export default function DoctorDashboard() {
     );
   };
   
-  // Find patient details for an appointment
   const getPatientDetails = (patientId: string) => {
     return patients.find(patient => patient.id === patientId) || null;
   };
   
   return (
     <AppLayout title="Doctor Dashboard" showBack={false}>
-      <div className="p-4">
+      <div className="p-4 bg-gray-900">
         {/* Doctor stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <Card>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card className="bg-gray-800 border-gray-700">
             <CardHeader className="pb-2">
-              <CardTitle className="text-2xl">{upcomingAppointments.length}</CardTitle>
-              <CardDescription>Upcoming</CardDescription>
+              <CardTitle className="text-2xl text-white">${earnings.total}</CardTitle>
+              <CardDescription className="text-gray-400">Total Earnings</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-between text-sm text-gray-400">
+                <span>Monthly: ${earnings.monthly}</span>
+                <span>Weekly: ${earnings.weekly}</span>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-2xl text-white">{todayAppointments.length}</CardTitle>
+              <CardDescription className="text-gray-400">Today's Appointments</CardDescription>
             </CardHeader>
           </Card>
           
-          <Card>
+          <Card className="bg-gray-800 border-gray-700">
             <CardHeader className="pb-2">
-              <CardTitle className="text-2xl">{pastAppointments.length}</CardTitle>
-              <CardDescription>Completed</CardDescription>
+              <CardTitle className="text-2xl text-white">{patients.length}</CardTitle>
+              <CardDescription className="text-gray-400">Total Patients</CardDescription>
             </CardHeader>
           </Card>
-          
-          <Card>
+
+          <Card className="bg-gray-800 border-gray-700">
             <CardHeader className="pb-2">
-              <CardTitle className="text-2xl">{patients.length}</CardTitle>
-              <CardDescription>Patients</CardDescription>
+              <CardTitle className="text-2xl text-white">{upcomingAppointments.length}</CardTitle>
+              <CardDescription className="text-gray-400">Upcoming Appointments</CardDescription>
             </CardHeader>
           </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Button 
+            onClick={() => navigate("/doctor/ai-assistant")}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Brain className="mr-2 h-4 w-4" /> AI Assistant
+          </Button>
+          <Button 
+            onClick={() => navigate("/doctor/analytics")}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            <BarChart className="mr-2 h-4 w-4" /> Analytics
+          </Button>
+          <Button 
+            onClick={() => navigate("/doctor/patients")}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            <Users className="mr-2 h-4 w-4" /> Patient Records
+          </Button>
         </div>
         
         {/* Appointments tabs */}
         <Tabs defaultValue="upcoming" value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-            <TabsTrigger value="past">Past Appointments</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 bg-gray-800">
+            <TabsTrigger value="upcoming" className="data-[state=active]:bg-blue-600">Upcoming</TabsTrigger>
+            <TabsTrigger value="past" className="data-[state=active]:bg-blue-600">Past Appointments</TabsTrigger>
           </TabsList>
           
           <TabsContent value="upcoming" className="mt-4 space-y-4">
@@ -112,7 +162,7 @@ export default function DoctorDashboard() {
                 const patient = getPatientDetails(appointment.patientId);
                 
                 return (
-                  <Card key={appointment.id}>
+                  <Card key={appointment.id} className="bg-gray-800 border-gray-700">
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
                         <div className="flex items-center">
@@ -121,8 +171,8 @@ export default function DoctorDashboard() {
                             <AvatarFallback>{patient?.name.charAt(0)}</AvatarFallback>
                           </Avatar>
                           <div>
-                            <CardTitle>{patient?.name}</CardTitle>
-                            <div className="flex items-center text-sm text-gray-500 mt-1">
+                            <CardTitle className="text-white">{patient?.name}</CardTitle>
+                            <div className="flex items-center text-sm text-gray-400 mt-1">
                               <Calendar className="w-4 h-4 mr-1" />
                               <span>{appointment.date}</span>
                               <Clock className="w-4 h-4 ml-3 mr-1" />
@@ -131,9 +181,9 @@ export default function DoctorDashboard() {
                           </div>
                         </div>
                         <Badge className={
-                          appointment.status === 'confirmed' ? 'bg-green-100 text-green-800' : 
-                          appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' : 
-                          'bg-yellow-100 text-yellow-800'
+                          appointment.status === 'confirmed' ? 'bg-green-900 text-green-300' : 
+                          appointment.status === 'cancelled' ? 'bg-red-900 text-red-300' : 
+                          'bg-yellow-900 text-yellow-300'
                         }>
                           {appointment.status === 'confirmed' ? 'Confirmed' : 
                            appointment.status === 'cancelled' ? 'Cancelled' : 'Pending'}
@@ -142,8 +192,8 @@ export default function DoctorDashboard() {
                     </CardHeader>
                     
                     <CardContent className="pb-2">
-                      <p className="text-gray-500">{appointment.reason || 'No reason provided'}</p>
-                      <Badge className="mt-2">{appointment.type}</Badge>
+                      <p className="text-gray-400">{appointment.reason || 'No reason provided'}</p>
+                      <Badge className="mt-2 bg-blue-900 text-blue-300">{appointment.type}</Badge>
                     </CardContent>
                     
                     <CardFooter>
@@ -152,15 +202,13 @@ export default function DoctorDashboard() {
                           <>
                             <Button 
                               onClick={() => handleAcceptAppointment(appointment.id)}
-                              className="flex-1" 
-                              variant="outline"
+                              className="flex-1 bg-green-600 hover:bg-green-700" 
                             >
                               <Check className="mr-2 h-4 w-4" /> Accept
                             </Button>
                             <Button 
                               onClick={() => handleCancelAppointment(appointment.id)}
-                              className="flex-1" 
-                              variant="destructive"
+                              className="flex-1 bg-red-600 hover:bg-red-700" 
                             >
                               <X className="mr-2 h-4 w-4" /> Decline
                             </Button>
@@ -171,14 +219,13 @@ export default function DoctorDashboard() {
                           <>
                             <Button 
                               onClick={() => handleCompleteAppointment(appointment.id)}
-                              className="flex-1"
+                              className="flex-1 bg-blue-600 hover:bg-blue-700"
                             >
                               <Check className="mr-2 h-4 w-4" /> Mark as Complete
                             </Button>
                             <Button 
                               onClick={() => navigate(`/chat/${patient?.id}`)}
-                              className="flex-1" 
-                              variant="outline"
+                              className="flex-1 bg-gray-700 hover:bg-gray-600" 
                             >
                               Message Patient
                             </Button>
@@ -190,7 +237,7 @@ export default function DoctorDashboard() {
                 );
               })
             ) : (
-              <div className="text-center py-8">
+              <div className="text-center py-8 text-gray-400">
                 <p>No upcoming appointments</p>
               </div>
             )}
@@ -202,7 +249,7 @@ export default function DoctorDashboard() {
                 const patient = getPatientDetails(appointment.patientId);
                 
                 return (
-                  <Card key={appointment.id}>
+                  <Card key={appointment.id} className="bg-gray-800 border-gray-700">
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
                         <div className="flex items-center">
@@ -211,8 +258,8 @@ export default function DoctorDashboard() {
                             <AvatarFallback>{patient?.name.charAt(0)}</AvatarFallback>
                           </Avatar>
                           <div>
-                            <CardTitle>{patient?.name}</CardTitle>
-                            <div className="flex items-center text-sm text-gray-500 mt-1">
+                            <CardTitle className="text-white">{patient?.name}</CardTitle>
+                            <div className="flex items-center text-sm text-gray-400 mt-1">
                               <Calendar className="w-4 h-4 mr-1" />
                               <span>{appointment.date}</span>
                               <Clock className="w-4 h-4 ml-3 mr-1" />
@@ -221,8 +268,8 @@ export default function DoctorDashboard() {
                           </div>
                         </div>
                         <Badge className={
-                          appointment.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                          'bg-red-100 text-red-800'
+                          appointment.status === 'completed' ? 'bg-green-900 text-green-300' : 
+                          'bg-red-900 text-red-300'
                         }>
                           {appointment.status === 'completed' ? 'Completed' : 'Cancelled'}
                         </Badge>
@@ -230,22 +277,20 @@ export default function DoctorDashboard() {
                     </CardHeader>
                     
                     <CardContent>
-                      <p className="text-gray-500">{appointment.reason || 'No reason provided'}</p>
+                      <p className="text-gray-400">{appointment.reason || 'No reason provided'}</p>
                     </CardContent>
                     
                     <CardFooter>
                       <div className="flex space-x-2 w-full">
                         <Button 
                           onClick={() => navigate(`/chat/${patient?.id}`)}
-                          variant="outline"
-                          className="flex-1"
+                          className="flex-1 bg-gray-700 hover:bg-gray-600"
                         >
                           Message Patient
                         </Button>
                         <Button 
-                          onClick={() => console.log("View medical records")}
-                          variant="outline"
-                          className="flex-1"
+                          onClick={() => navigate(`/doctor/patient-records/${patient?.id}`)}
+                          className="flex-1 bg-blue-600 hover:bg-blue-700"
                         >
                           <FileText className="mr-2 h-4 w-4" /> View Records
                         </Button>
@@ -255,7 +300,7 @@ export default function DoctorDashboard() {
                 );
               })
             ) : (
-              <div className="text-center py-8">
+              <div className="text-center py-8 text-gray-400">
                 <p>No past appointments</p>
               </div>
             )}
